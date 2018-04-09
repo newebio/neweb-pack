@@ -199,9 +199,12 @@ class ModulePacker {
             const tmpName = (+new Date()).toString() + "" + Math.round(Math.random() * 10000);
             const tmpFileName = context + "/" + tmpName + ".js";
             yield util_1.promisify(fs_1.writeFile)(tmpFileName, "");
-            const packageJSONPath = module_info_1.getNearestPackageJSON(childModuleName, tmpFileName);
+            let packageJSONPath = module_info_1.getNearestPackageJSON(childModuleName, tmpFileName);
             if (!packageJSONPath) {
-                throw new Error("not found package.json for " + childModuleName + " in " + tmpFileName);
+                if (["url", "path", "util"].indexOf(childModuleName) === -1) {
+                    throw new Error("not found package.json for " + childModuleName + " in " + tmpFileName);
+                }
+                packageJSONPath = path_1.resolve(path_1.join(__dirname, "package.json"));
             }
             const packageJSON = JSON.parse((yield util_1.promisify(fs_1.readFile)(packageJSONPath)).toString());
             yield util_1.promisify(fs_1.unlink)(tmpFileName);

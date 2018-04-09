@@ -1,7 +1,7 @@
 import { exists, readFile, stat, unlink, writeFile } from "fs";
 // import globby = require("globby");
 import mkdirp = require("mkdirp");
-import { basename, dirname, resolve as resolvePath, sep } from "path";
+import { basename, dirname, join, resolve as resolvePath, sep } from "path";
 import { promisify } from "util";
 import webpack = require("webpack");
 import { getNearestPackageJSON } from "./utils/module-info";
@@ -203,9 +203,13 @@ class ModulePacker {
         const tmpName = (+new Date()).toString() + "" + Math.round(Math.random() * 10000);
         const tmpFileName = context + "/" + tmpName + ".js";
         await promisify(writeFile)(tmpFileName, "");
-        const packageJSONPath = getNearestPackageJSON(childModuleName, tmpFileName);
+        let packageJSONPath = getNearestPackageJSON(childModuleName, tmpFileName);
+
         if (!packageJSONPath) {
-            throw new Error("not found package.json for " + childModuleName + " in " + tmpFileName);
+            if (["url", "path", "util"].indexOf(childModuleName) === -1) {
+                throw new Error("not found package.json for " + childModuleName + " in " + tmpFileName);
+            }
+            packageJSONPath = resolvePath(join(__dirname, "package.json"));
         }
         const packageJSON = JSON.parse((await promisify(readFile)(packageJSONPath)).toString());
         await promisify(unlink)(tmpFileName);
