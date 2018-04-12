@@ -11,6 +11,7 @@ export interface IModulePackerConfig {
     appRoot: string;
     excludedModules?: string[];
     REQUIRE_FUNC_NAME: string;
+    webpackConfig?: any;
 }
 
 export interface IPackInfo extends IPackInfoModule {
@@ -27,9 +28,13 @@ class ModulePacker {
     protected localModulesPath: string;
     protected npmModulesPath: string;
     protected excludedModules: string[] = [];
+    protected webpackConfig: any = {};
     constructor(protected config: IModulePackerConfig) {
         if (this.config.excludedModules) {
             this.excludedModules = this.config.excludedModules;
+        }
+        if (this.config.webpackConfig) {
+            this.webpackConfig = this.config.webpackConfig;
         }
         this.localModulesPath = resolvePath(this.config.modulesPath + "/local");
         this.npmModulesPath = resolvePath(this.config.modulesPath + "/npm");
@@ -75,6 +80,7 @@ class ModulePacker {
         this.modules.push(info);
         return new Promise<any>((resolve, reject) => {
             webpack({
+                ...this.webpackConfig,
                 entry: localPath,
                 output: {
                     path: dirname(mainFile),

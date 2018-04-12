@@ -21,8 +21,12 @@ class ModulePacker {
         this.config = config;
         this.modules = [];
         this.excludedModules = [];
+        this.webpackConfig = {};
         if (this.config.excludedModules) {
             this.excludedModules = this.config.excludedModules;
+        }
+        if (this.config.webpackConfig) {
+            this.webpackConfig = this.config.webpackConfig;
         }
         this.localModulesPath = path_1.resolve(this.config.modulesPath + "/local");
         this.npmModulesPath = path_1.resolve(this.config.modulesPath + "/npm");
@@ -69,16 +73,11 @@ class ModulePacker {
             const info = { name: moduleName, version, modules: [], type: "local" };
             this.modules.push(info);
             return new Promise((resolve, reject) => {
-                webpack({
-                    entry: localPath,
-                    output: {
+                webpack(Object.assign({}, this.webpackConfig, { entry: localPath, output: {
                         path: path_1.dirname(mainFile),
                         filename: path_1.basename(mainFile),
                         libraryTarget: "commonjs2",
-                    },
-                    target: "node",
-                    mode: "production",
-                    externals: [(context, childModuleName, callback) => __awaiter(this, void 0, void 0, function* () {
+                    }, target: "node", mode: "production", externals: [(context, childModuleName, callback) => __awaiter(this, void 0, void 0, function* () {
                             if (!childModuleName.startsWith(".") && childModuleName !== localPath) {
                                 if (this.excludedModules.indexOf(childModuleName) > -1) {
                                     callback(null, `the ` + `${this.config.REQUIRE_FUNC_NAME}("npm", "${childModuleName}")`);
@@ -108,8 +107,7 @@ class ModulePacker {
                                 return;
                             }
                             callback();
-                        })],
-                }).run((err, stats) => __awaiter(this, void 0, void 0, function* () {
+                        })] })).run((err, stats) => __awaiter(this, void 0, void 0, function* () {
                     if (err) {
                         reject(err);
                         return;
