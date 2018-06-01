@@ -12,6 +12,7 @@ export interface IModulePackerConfig {
     excludedModules?: string[];
     REQUIRE_FUNC_NAME: string;
     webpackConfig?: any;
+    disableCacheForLocalModules?: boolean;
 }
 
 export interface IPackInfo extends IPackInfoModule {
@@ -62,19 +63,21 @@ class ModulePacker {
         const version = (await promisify(stat)(localPath)).mtime.getTime().toString();
         const mainFile = this.localModulesPath + "/" + moduleName + "/" + version + "/index.js";
         const newebFile = this.localModulesPath + "/" + moduleName + "/" + version + "/neweb.json";
-        const existingModuleInfo =
-            this.modules.find((m) => m.type === "local" && m.name === moduleName && m.version === version);
-        if (existingModuleInfo) {
-            return existingModuleInfo;
-        }
-        if (await promisify(exists)(newebFile)) {
-            const jsonModuleInfo = JSON.parse((await promisify(readFile)(newebFile)).toString());
-            return {
-                name: jsonModuleInfo.name,
-                version: jsonModuleInfo.version,
-                type: "local",
-                modules: jsonModuleInfo.dependencies,
-            };
+        if (!this.config.disableCacheForLocalModules) {
+            const existingModuleInfo =
+                this.modules.find((m) => m.type === "local" && m.name === moduleName && m.version === version);
+            if (existingModuleInfo) {
+                return existingModuleInfo;
+            }
+            if (await promisify(exists)(newebFile)) {
+                const jsonModuleInfo = JSON.parse((await promisify(readFile)(newebFile)).toString());
+                return {
+                    name: jsonModuleInfo.name,
+                    version: jsonModuleInfo.version,
+                    type: "local",
+                    modules: jsonModuleInfo.dependencies,
+                };
+            }
         }
         const info: IPackInfo = { name: moduleName, version, modules: [], type: "local" };
         this.modules.push(info);
