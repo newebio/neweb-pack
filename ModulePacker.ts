@@ -64,14 +64,16 @@ class ModulePacker {
         const version = (await promisify(stat)(localPath)).mtime.getTime().toString();
         const mainFile = this.localModulesPath + "/" + moduleName + "/" + version + "/index.js";
         let newebFile = this.localModulesPath + "/" + moduleName + "/" + version + "/neweb.json";
-        if (!this.config.disableCacheForLocalModules) {
-            const existingModuleInfo =
-                this.modules.find((m) => m.type === "local" && m.name === moduleName && m.version === version);
-            if (existingModuleInfo) {
-                return existingModuleInfo;
-            }
-            if (await promisify(exists)(newebFile)) {
-                const jsonModuleInfo = JSON.parse((await promisify(readFile)(newebFile)).toString());
+
+        const existingModuleInfo =
+            this.modules.find((m) => m.type === "local" && m.name === moduleName && m.version === version);
+        if (existingModuleInfo && (!this.config.disableCacheForLocalModules
+            || existingModuleInfo.modules.length === 0)) {
+            return existingModuleInfo;
+        }
+        if (await promisify(exists)(newebFile)) {
+            const jsonModuleInfo = JSON.parse((await promisify(readFile)(newebFile)).toString());
+            if (jsonModuleInfo.dependencies.length === 0 || !this.config.disableCacheForLocalModules) {
                 return {
                     name: jsonModuleInfo.name,
                     version: jsonModuleInfo.version,
