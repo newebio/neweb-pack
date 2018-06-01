@@ -56,7 +56,7 @@ class ModulePacker {
                 .replace(/\\/gi, "/");
             const version = (yield util_1.promisify(fs_1.stat)(localPath)).mtime.getTime().toString();
             const mainFile = this.localModulesPath + "/" + moduleName + "/" + version + "/index.js";
-            const newebFile = this.localModulesPath + "/" + moduleName + "/" + version + "/neweb.json";
+            let newebFile = this.localModulesPath + "/" + moduleName + "/" + version + "/neweb.json";
             if (!this.config.disableCacheForLocalModules) {
                 const existingModuleInfo = this.modules.find((m) => m.type === "local" && m.name === moduleName && m.version === version);
                 if (existingModuleInfo) {
@@ -72,6 +72,7 @@ class ModulePacker {
                     };
                 }
             }
+            let maxVersion = parseInt(version, 10);
             const info = { name: moduleName, version, modules: [], type: "local" };
             this.modules.push(info);
             return new Promise((resolve, reject) => {
@@ -104,6 +105,7 @@ class ModulePacker {
                                     type: "local",
                                 });
                                 depInfo.modules.map((m) => info.modules.push(m));
+                                maxVersion = Math.max(maxVersion, parseInt(depInfo.version, 10));
                                 callback(null, `the ` +
                                     `${this.config.REQUIRE_FUNC_NAME}("local", "${depInfo.name}", "${depInfo.version}")`);
                                 return;
@@ -118,10 +120,17 @@ class ModulePacker {
                         reject(stats.toString());
                         return;
                     }
+                    if (info.version !== maxVersion.toString()) {
+                        const newVersionFile = path_1.resolve(this.localModulesPath + "/" + moduleName + "/" + maxVersion + "/index.js");
+                        newebFile = this.localModulesPath + "/" + moduleName + "/" + maxVersion + "/neweb.json";
+                        yield util_1.promisify(mkdirp)(path_1.dirname(newVersionFile));
+                        yield util_1.promisify(fs_1.copyFile)(mainFile, newVersionFile);
+                    }
+                    info.version = maxVersion.toString();
                     info.modules = uniqueModules_1.default(info.modules);
                     yield util_1.promisify(fs_1.writeFile)(newebFile, `{
                     "name": "${moduleName}",
-                    "version": "${version}",
+                    "version": "${maxVersion}",
                     "type": "npm",
                     "dependencies": ${JSON.stringify(info.modules.map((mod) => ({ name: mod.name, type: mod.type, version: mod.version })))}
                 }`);
